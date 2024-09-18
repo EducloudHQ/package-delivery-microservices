@@ -1,0 +1,215 @@
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+type Mutation {
+  createPackage(input: CreatePackageInput!): Package! @aws_api_key
+  updatePackage(input: UpdatePackageInput!): Package! @aws_api_key
+  packageTimelapse(input: PackageMovementInput!): PackageMovement! @aws_api_key
+  assignPackageToDeliveryAgent(
+    packageId: String!
+    deliveryAgentId: String!
+  ): String! @aws_api_key
+  packageDelivered(packageId: String!): Boolean! @aws_api_key
+}
+
+type Query {
+  getPackage(id: String!): Package! @aws_api_key
+  getAllPackages: [Package]! @aws_api_key
+  getAllPackagesBaseOnStatus(packageStatus: String): [Package]! @aws_api_key
+  getCurrentPackageMovement(id: String!): PackageMovement! @aws_api_key
+}
+type Subscription {
+  updatePackageTimelapse: PackageMovement
+    @aws_subscribe(mutations: ["packageTimelapse"])
+    @aws_api_key
+
+  onCreatePackageEvent: Package
+    @aws_subscribe(mutations: ["createPackage"])
+    @aws_api_key
+}
+type User @aws_api_key {
+  id: String!
+  username: String!
+  firstName: String!
+  isAdmin: Boolean!
+  lastName: String!
+  userType: USERTYPE!
+  location: Geolocation!
+  address: Address!
+  email: AWSEmail!
+  profilePicUrl: String!
+  createdOn: AWSTimestamp
+  updatedOn: AWSTimestamp
+}
+
+type AssignDeliveryPackageResult {
+  packageId: String!
+  user: User!
+}
+
+type Package @aws_api_key {
+  id: String!
+  packageName: String!
+  packageDescription: String!
+  deliveryAddress: DeliverAddress!
+  packageStatus: PACKAGE_STATUS!
+  senderId: String!
+  packageType: PACKAGE_TYPE!
+  deliveryMode: PACKAGE_DELIVERY_MODE!
+  deliveryAgentId: String!
+  createdOn: AWSTimestamp!
+  pickupLocation: Location!
+  location: Location
+  updatedOn: AWSTimestamp
+}
+
+type Location {
+  type: String!
+  coordinates: [Float!]
+}
+
+type DeliverAddress @aws_api_key {
+  city: String!
+  street: String!
+  zip: Int!
+  country: String!
+  longitude: Float!
+  latitude: Float!
+}
+
+type Order @aws_api_key {
+  id: ID!
+  orderNum: String!
+  packageId: String!
+  package: Package
+  orderStatus: ORDER_STATUS!
+  createdOn: AWSTimestamp!
+  updatedOn: AWSTimestamp
+}
+
+enum ORDER_STATUS {
+  CREATED
+  IN_PROGRESS
+  COMPLETED
+}
+enum PACKAGE_STATUS {
+  PENDING
+  ASSIGNED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+input CreatePackageInput @aws_api_key {
+  packageName: String!
+  packageDescription: String!
+  deliveryAddress: DeliverAddressInput!
+  senderId: String!
+  packageStatus: PACKAGE_STATUS!
+  packageType: PACKAGE_TYPE!
+  deliveryMode: PACKAGE_DELIVERY_MODE!
+}
+input UpdatePackageInput @aws_api_key {
+  id: String!
+  packageName: String
+  packageDescription: String
+  deliveryAddress: DeliverAddressInput!
+  senderId: String!
+  packageStatus: PACKAGE_STATUS!
+  deliveryAgentId: String!
+}
+
+input DeliverAddressInput @aws_api_key {
+  city: String!
+  street: String!
+  zip: Int!
+  country: String!
+  longitude: Float!
+  latitude: Float!
+}
+
+enum PACKAGE_TYPE {
+  FOOD
+  MEDICATION
+  ELECTRONICS
+  FURNITURE
+  FASHION
+  BEAUTY
+  OTHER
+}
+
+enum PACKAGE_DELIVERY_MODE {
+  NORMAL
+  EXPRESS
+  PRO
+}
+
+input CreateUserInput @aws_api_key {
+  firstName: String!
+  lastName: String!
+  username: String!
+  email: AWSEmail!
+  address: AddressInput!
+  location: GeolocationInput!
+  phoneNumber: AWSPhone!
+  userType: USERTYPE!
+  profilePicUrl: String
+}
+
+input UpdateUserInput @aws_api_key {
+  id: ID!
+  firstName: String
+  lastName: String
+  username: String
+  address: AddressInput
+  location: GeolocationInput
+  phoneNumber: AWSPhone
+  profilePicUrl: String
+}
+type Geolocation @aws_api_key {
+  longitude: Float!
+  latitude: Float!
+}
+
+input GeolocationInput @aws_api_key {
+  longitude: Float!
+  latitude: Float!
+}
+
+type Address @aws_api_key {
+  street: String!
+  city: String!
+  zip: Int!
+  country: String!
+}
+input AddressInput @aws_api_key {
+  street: String!
+  city: String!
+  zip: Int!
+  country: String!
+}
+
+enum USERTYPE {
+  ADMIN
+  CUSTOMER
+  DELIVERY_AGENT
+}
+type PackagesResult @aws_api_key {
+  items: [Package!]!
+}
+type PackageMovement @aws_api_key {
+  longitude: Float!
+  latitude: Float!
+  deliveryAgentId: String!
+  packageId: String!
+}
+
+input PackageMovementInput @aws_api_key {
+  longitude: Float!
+  latitude: Float!
+  deliveryAgentId: String!
+  packageId: String!
+}
