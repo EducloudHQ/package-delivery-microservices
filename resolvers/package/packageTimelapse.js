@@ -12,8 +12,8 @@ export function request(ctx) {
     ...input,
     id: input.packageId,
     timestamp: timestamp,
-    // PK: `DELIVERYAGENT#${input.deliveryAgentId}`,
-    // SK: `PACKAGE#${input.packageId}`,
+    GSI1_PK: `DELIVERYAGENT#${input.deliveryAgentId}`,
+    GSI1_SK: `PACKAGE#${input.packageId}`,
     createdOn: util.time.nowEpochMilliSeconds(),
   };
 

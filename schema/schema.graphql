@@ -33,10 +33,6 @@ type Subscription {
   onCreatePackageEvent: Package
     @aws_subscribe(mutations: ["createPackage"])
     @aws_api_key
-
-  onCreatePackageEventEnhanced: Package
-    @aws_subscribe(mutations: ["createPackage"])
-    @aws_api_key
 }
 type User @aws_api_key {
   id: String!

@@ -25,6 +25,5 @@ export function request(ctx) {
 
 export function response(ctx) {
   ctx.stash.event = { detailType: 'package.created', detail: ctx.result };
-  console.log("CreatedPackage>>>>>>>>>>>>>>>>>>>>>>>>>",ctx.result)
   return ctx.result;
 }

@@ -13,7 +13,9 @@ export class PackageServiceStack extends cdk.Stack {
     super(scope, id, props);
 
 
-    // Create our dynamodb table
+    /********************************************************************************************************
+     *      Create the dynamodb table
+     */
 
     const packageTable = new _dynamodb.Table(this, "PackageTable", {
       tableName: "packageTable",
@@ -30,7 +32,27 @@ export class PackageServiceStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     })
 
-    //create our API
+    /********************************************************************************************************
+     *      Add a global secondary index
+     */
+
+    packageTable.addGlobalSecondaryIndex({
+      indexName: "package-timelapse-index",
+      partitionKey: {
+        name: "GSI1_PK",
+        type: _dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: "GSI1_SK",
+        type: _dynamodb.AttributeType.STRING,
+      },
+      projectionType: _dynamodb.ProjectionType.ALL,
+    });
+    
+
+    /********************************************************************************************************
+     *      Create the GraphQl Api
+     */
     const api = new appsync.GraphqlApi(this, "PackageAPI", {
       name: "PackageAPI",
       definition: appsync.Definition.fromFile("./schema/schema.graphql"),
@@ -52,14 +74,24 @@ export class PackageServiceStack extends cdk.Stack {
 
     api.addEnvironmentVariable("TABLE_NAME", packageTable.tableName);
 
+    /********************************************************************************************************
+     *      Create an EventBus
+     */
     const eventBus = new events.EventBus(this, "PackageEventBus", {
       eventBusName: "PackageEventBus",
     });
 
+    /********************************************************************************************************
+     *      Add Dynamodb and EventBridge Datasource to the Api
+     */
     const packageDatasource = api.addDynamoDbDataSource("PackageDatasource", packageTable)
     const eventBridgeDs = api.addEventBridgeDataSource('EventBridge', eventBus);
     const noneDatasource = api.addNoneDataSource('NoneDataSource');
 
+
+    /********************************************************************************************************
+     *      EveentBridge Function
+     */
     const putEvent = new appsync.AppsyncFunction(this, 'PutEvent', {
       api: api,
       name: 'PutEvent',
@@ -68,6 +100,9 @@ export class PackageServiceStack extends cdk.Stack {
       code: appsync.Code.fromAsset('./resolvers/package/putEvent.js'),
     });
 
+    /********************************************************************************************************
+     *      Appsync Functions
+     */
     const createPackageFunction = new appsync.AppsyncFunction(this, "createPackageFunction", {
       api,
       name: "createPackageFunction",
@@ -147,7 +182,6 @@ export class PackageServiceStack extends cdk.Stack {
       }
     );
 
-
     const getAllPackagesBaseOnStatusFunction = new appsync.AppsyncFunction(
       this,
       "getAllPackagesBaseOnStatusFunction",
@@ -172,7 +206,9 @@ export class PackageServiceStack extends cdk.Stack {
       }
     );
 
-
+    /********************************************************************************************************
+     *      Appsync Mutation resolvers
+     */
 
     new appsync.Resolver(this, "createPackagePipelineResolver", {
       api,
@@ -219,6 +255,9 @@ export class PackageServiceStack extends cdk.Stack {
       pipelineConfig: [packageDeliveredFunction],
     });
 
+    /********************************************************************************************************
+     *      Appsync Query resolvers
+     */
     new appsync.Resolver(this, "getPackageResolver", {
       api,
       typeName: "Query",
@@ -256,18 +295,9 @@ export class PackageServiceStack extends cdk.Stack {
       pipelineConfig: [getCurrentPackageMovementFunction],
     });
 
-    new appsync.Resolver(this, "onCreatePackageEvent", {
-      api,
-      typeName: "Subscription",
-      fieldName: "onCreatePackageEventEnhanced",
-      dataSource: noneDatasource,
-      runtime: appsync.FunctionRuntime.JS_1_0_0,
-      code: appsync.Code.fromAsset("./resolvers/package/onCreatePackageEvent.js"),
-    });
-
-/****************************************************************
- *      Event bridge rule
- */
+    /********************************************************************************************************
+     *      Event bridge rule
+     */
     const rule = new events.Rule(this, "package-delivered", {
       eventBus: eventBus,
       eventPattern: {
@@ -276,9 +306,9 @@ export class PackageServiceStack extends cdk.Stack {
       },
     });
 
-/****************************************************************
- *      Event bridge rule target
- */
+    /********************************************************************************************************
+     *      Add GraphQl target to the event bridge rule
+     */
     rule.addTarget(new _target.AppSync(api, {
       graphQLOperation: 'mutation packageDelivered($packageId: String!){ packageDelivered(packageId: $packageId) }',
       variables: events.RuleTargetInput.fromObject({
@@ -286,6 +316,9 @@ export class PackageServiceStack extends cdk.Stack {
       }),
     }));
 
+    /********************************************************************************************************
+     *      Create IAM Role with the permision to mutate the PackageDelivered Mutatation
+     */
     const eventBridgeRole = new iam.Role(this, 'EventBridgeInvokeAppSyncRole', {
       assumedBy: new iam.ServicePrincipal('events.amazonaws.com'), // EventBridge will assume this role
     });
@@ -298,9 +331,9 @@ export class PackageServiceStack extends cdk.Stack {
 
     api.grantMutation(eventBridgeRole, 'packageDelivered')
 
-/****************************************************************
- *      Outputs
- */
+    /********************************************************************************************************
+     *      Outputs
+     */
     new cdk.CfnOutput(this, "appsync api key", {
       value: api.apiKey!,
     });
