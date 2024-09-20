@@ -1,7 +1,12 @@
 schema {
+  query: Query
   mutation: Mutation
 }
 
 type Mutation {
   packageDelivered(packageId: String!): Boolean! @aws_api_key
+}
+
+type Query {
+  getUserAccount(id: String!): String! @aws_api_key
 }
