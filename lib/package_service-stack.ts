@@ -4,6 +4,8 @@ import * as appsync from "aws-cdk-lib/aws-appsync";
 import * as events from "aws-cdk-lib/aws-events";
 import * as _dynamodb from "aws-cdk-lib/aws-dynamodb"
 import path = require("path");
+import * as _target from "aws-cdk-lib/aws-events-targets";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 
 export class PackageServiceStack extends cdk.Stack {
@@ -36,6 +38,11 @@ export class PackageServiceStack extends cdk.Stack {
         defaultAuthorization: {
           authorizationType: appsync.AuthorizationType.API_KEY,
         },
+        additionalAuthorizationModes: [
+          {
+            authorizationType: appsync.AuthorizationType.IAM,    // Additional IAM authorization
+          },
+        ],
       },
       logConfig: {
         fieldLogLevel: appsync.FieldLogLevel.ALL,
@@ -51,7 +58,7 @@ export class PackageServiceStack extends cdk.Stack {
 
     const packageDatasource = api.addDynamoDbDataSource("PackageDatasource", packageTable)
     const eventBridgeDs = api.addEventBridgeDataSource('EventBridge', eventBus);
-
+    const noneDatasource = api.addNoneDataSource('NoneDataSource');
 
     const putEvent = new appsync.AppsyncFunction(this, 'PutEvent', {
       api: api,
@@ -100,6 +107,18 @@ export class PackageServiceStack extends cdk.Stack {
         dataSource: packageDatasource,
         name: "packageTimelapseFunction",
         code: appsync.Code.fromAsset("./resolvers/package/packageTimelapse.js"),
+        runtime: appsync.FunctionRuntime.JS_1_0_0,
+      }
+    );
+
+    const packageDeliveredFunction = new appsync.AppsyncFunction(
+      this,
+      "packageDeliveredFunction",
+      {
+        api,
+        dataSource: packageDatasource,
+        name: "packageDeliveredFunction",
+        code: appsync.Code.fromAsset("./resolvers/package/packageDelivered.js"),
         runtime: appsync.FunctionRuntime.JS_1_0_0,
       }
     );
@@ -191,6 +210,15 @@ export class PackageServiceStack extends cdk.Stack {
       pipelineConfig: [packageTimelapseFunction],
     });
 
+    new appsync.Resolver(this, "packageDeliveredResolver", {
+      api,
+      typeName: "Mutation",
+      fieldName: "packageDelivered",
+      runtime: appsync.FunctionRuntime.JS_1_0_0,
+      code: appsync.Code.fromAsset("./resolvers/pipeline/default.js"),
+      pipelineConfig: [packageDeliveredFunction],
+    });
+
     new appsync.Resolver(this, "getPackageResolver", {
       api,
       typeName: "Query",
@@ -228,20 +256,51 @@ export class PackageServiceStack extends cdk.Stack {
       pipelineConfig: [getCurrentPackageMovementFunction],
     });
 
-    // new appsync.Resolver(this, "onCreatePackageEvent", {
-    //   api,
-    //   typeName: "Subscription",
-    //   fieldName: "onCreatePackageEvent",
-    //   dataSource: new appsync.NoneDataSource(this, 'NoneDataSource', {
-    //     api: api,
-    //     name: 'onCreatePackageEvent',
-    //   }),
-    //   runtime: appsync.FunctionRuntime.JS_1_0_0,
-    //   code: appsync.Code.fromAsset("./resolvers/package/onCreatePackageEvent.js"),
-    // });
+    new appsync.Resolver(this, "onCreatePackageEvent", {
+      api,
+      typeName: "Subscription",
+      fieldName: "onCreatePackageEventEnhanced",
+      dataSource: noneDatasource,
+      runtime: appsync.FunctionRuntime.JS_1_0_0,
+      code: appsync.Code.fromAsset("./resolvers/package/onCreatePackageEvent.js"),
+    });
 
+/****************************************************************
+ *      Event bridge rule
+ */
+    const rule = new events.Rule(this, "package-delivered", {
+      eventBus: eventBus,
+      eventPattern: {
+        detailType: events.Match.exactString("package.delivered"),
+        source: ["delivery.api"],
+      },
+    });
 
-    //////////////////////////
+/****************************************************************
+ *      Event bridge rule target
+ */
+    rule.addTarget(new _target.AppSync(api, {
+      graphQLOperation: 'mutation packageDelivered($packageId: String!){ packageDelivered(packageId: $packageId) }',
+      variables: events.RuleTargetInput.fromObject({
+        packageId: events.RuleTargetInput.fromEventPath('$.detailType'),
+      }),
+    }));
+
+    const eventBridgeRole = new iam.Role(this, 'EventBridgeInvokeAppSyncRole', {
+      assumedBy: new iam.ServicePrincipal('events.amazonaws.com'), // EventBridge will assume this role
+    });
+
+    eventBridgeRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['appsync:GraphQL'],
+      resources: [api.arn],
+    }));
+
+    api.grantMutation(eventBridgeRole, 'packageDelivered')
+
+/****************************************************************
+ *      Outputs
+ */
     new cdk.CfnOutput(this, "appsync api key", {
       value: api.apiKey!,
     });

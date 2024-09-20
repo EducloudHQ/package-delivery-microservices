@@ -12,7 +12,7 @@ type Mutation {
     packageId: String!
     deliveryAgentId: String!
   ): String! @aws_api_key
-  packageDelivered(packageId: String!): Boolean! @aws_api_key
+  packageDelivered(packageId: String!): Boolean! @aws_iam
 }
 
 type Query {
@@ -26,7 +26,15 @@ type Subscription {
     @aws_subscribe(mutations: ["packageTimelapse"])
     @aws_api_key
 
+  onPackageDelivered: Boolean
+    @aws_subscribe(mutations: ["packageDelivered"])
+    @aws_api_key
+
   onCreatePackageEvent: Package
+    @aws_subscribe(mutations: ["createPackage"])
+    @aws_api_key
+
+  onCreatePackageEventEnhanced: Package
     @aws_subscribe(mutations: ["createPackage"])
     @aws_api_key
 }
