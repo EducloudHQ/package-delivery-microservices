@@ -1,7 +1,7 @@
 
 # Deployment
 
-- Deploy the merge api
+- Deploy the merge api (main branch)
 
 - Get the roleArn, the mergedApiArn, and the mergedApiId and update the context variables in the `cdk.json` file for all the services.
 
