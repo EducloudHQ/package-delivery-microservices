@@ -1,5 +1,5 @@
 export function request(ctx) {
-  const { payment_intent } = ctx.args;
+  const { payment_id } = ctx.args;
 
   return {
     version: "2018-05-29",

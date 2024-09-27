@@ -1,6 +1,10 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as appsync from "aws-cdk-lib/aws-appsync";
+import * as iam from "aws-cdk-lib/aws-iam";
+import { SourceApiAssociationMergeOperation } from "awscdk-appsync-utils";
+import { GraphqlApi, SourceApiAssociation, MergeType } from "aws-cdk-lib/aws-appsync";
+
 
 import path = require("path");
 import process = require("process");
@@ -27,7 +31,7 @@ export class CdkPackageServiceStack extends cdk.Stack {
         },
       },
       logConfig: {
-        fieldLogLevel: appsync.FieldLogLevel.DEBUG,
+        fieldLogLevel: appsync.FieldLogLevel.ALL,
       },
       xrayEnabled: true,
     });
@@ -37,10 +41,41 @@ export class CdkPackageServiceStack extends cdk.Stack {
       "http://payment-service-ALB-99682079.us-east-2.elb.amazonaws.com"
     );
 
+    /********************************************************************************************************
+ *      Merge Api Execution Rule
+ */
+    const roleArn = this.node.tryGetContext('roleArn');
+    const mergedApiExecutionRole = iam.Role.fromRoleArn(this, 'MergedApiExecutionRole',
+      roleArn)
+
+    const mergedApiArn = this.node.tryGetContext('mergedApiArn');
+    const mergedApiId = this.node.tryGetContext('mergedApiId');
+
+
+    const mergedApi = GraphqlApi.fromGraphqlApiAttributes(this, 'MergedApi', {
+      graphqlApiArn: mergedApiArn,
+      graphqlApiId: mergedApiId,
+    });
+
+    /********************************************************************************************************
+     *      Associates this api to the MergedApi
+     */
+    const sourceApiAssociation = new SourceApiAssociation(this, 'PackageSourceApiAssociation', {
+      sourceApi: api,
+      mergedApi: mergedApi,
+      mergedApiExecutionRole: mergedApiExecutionRole,
+      mergeType: MergeType.MANUAL_MERGE,
+    });
+
+    new SourceApiAssociationMergeOperation(this, 'SourceApiMergeOperation', {
+      sourceApiAssociation: sourceApiAssociation,
+      alwaysMergeOnStackUpdate: true
+    });
+
     new appsync.Resolver(this, "createPaymentResolver", {
       api,
       typeName: "Mutation",
-      fieldName: "createPayment",
+      fieldName: "createPaymentIntent",
       dataSource: paymentsAPIDatasource,
       runtime: appsync.FunctionRuntime.JS_1_0_0,
       code: appsync.Code.fromAsset(
