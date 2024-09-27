@@ -8,5 +8,5 @@ type Mutation {
 }
 
 type Query {
-  getUserAccount(id: String!): String! @aws_api_key
+  getUser(id: String!): String! @aws_api_key
 }
