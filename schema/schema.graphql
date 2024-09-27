@@ -4,7 +4,7 @@ schema {
 }
 
 type Mutation {
-  packageDelivered(packageId: String!): Boolean! @aws_api_key
+  packageDroped(packageId: String!): Boolean! @aws_api_key
 }
 
 type Query {

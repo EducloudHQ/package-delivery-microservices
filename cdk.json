@@ -66,6 +66,9 @@
     "@aws-cdk/aws-eks:nodegroupNameAttribute": true,
     "@aws-cdk/aws-ec2:ebsDefaultGp3Volume": true,
     "@aws-cdk/aws-ecs:removeDefaultDeploymentAlarm": true,
-    "@aws-cdk/custom-resources:logApiResponseDataPropertyTrueDefault": false
+    "@aws-cdk/custom-resources:logApiResponseDataPropertyTrueDefault": false,
+    "roleArn": "arn:aws:iam::132260253285:role/MergedApiStack-MergedApiExecutionRoleA4AA677D-gbLfmnhrM9hg",
+     "mergedApiArn": "arn:aws:appsync:us-east-1:132260253285:apis/i3fyxmhvgnfyjng5geuyfmjucq",
+     "mergedApiId": "i3fyxmhvgnfyjng5geuyfmjucq"
   }
 }
