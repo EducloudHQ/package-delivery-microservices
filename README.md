@@ -1,14 +1,17 @@
-# Welcome to your CDK TypeScript project
 
-This is a blank project for CDK development with TypeScript.
+# Deployment
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+- Deploy the merge api
 
-## Useful commands
+- Get the roleArn, the mergedApiArn, and the mergedApiId and update the context variables in the `cdk.json` file for all the services.
 
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `npx cdk deploy`  deploy this stack to your default AWS account/region
-* `npx cdk diff`    compare deployed stack with current state
-* `npx cdk synth`   emits the synthesized CloudFormation template
+- Deploy the `user-service`
+
+- Deploy the `payment-service`
+
+- Deploy the `package-service` to create the event bus.
+
+- Get the bus Arn and update the `context variable` in the `delivery-service` varaible.
+
+- Deploy the `delivery-service`
+
