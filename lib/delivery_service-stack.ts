@@ -88,7 +88,6 @@ export class DeliveryServiceStack extends cdk.Stack {
       code: appsync.Code.fromAsset("./resolvers/pipeline/default.js"),
       pipelineConfig: [putEvent],
     });
-    // arn:aws:events:us-east-1:132260253285:event-bus/PackageEventBus
   }
 }
 

@@ -69,6 +69,7 @@
     "@aws-cdk/custom-resources:logApiResponseDataPropertyTrueDefault": false,
     "roleArn": "arn:aws:iam::132260253285:role/MergedApiStack-MergedApiExecutionRoleA4AA677D-gbLfmnhrM9hg",
      "mergedApiArn": "arn:aws:appsync:us-east-1:132260253285:apis/i3fyxmhvgnfyjng5geuyfmjucq",
-     "mergedApiId": "i3fyxmhvgnfyjng5geuyfmjucq"
+     "mergedApiId": "i3fyxmhvgnfyjng5geuyfmjucq",
+     "packageDeliveryEventBusARN":"arn:aws:events:us-east-1:132260253285:event-bus/PackageEventBus"
   }
 }
