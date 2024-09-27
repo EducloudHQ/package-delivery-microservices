@@ -6,6 +6,8 @@ import * as _dynamodb from "aws-cdk-lib/aws-dynamodb"
 import path = require("path");
 import * as _target from "aws-cdk-lib/aws-events-targets";
 import * as iam from "aws-cdk-lib/aws-iam";
+import { SourceApiAssociationMergeOperation } from "awscdk-appsync-utils";
+import { GraphqlApi, SourceApiAssociation, MergeType } from "aws-cdk-lib/aws-appsync";
 
 
 export class PackageServiceStack extends cdk.Stack {
@@ -48,7 +50,7 @@ export class PackageServiceStack extends cdk.Stack {
       },
       projectionType: _dynamodb.ProjectionType.ALL,
     });
-    
+
 
     /********************************************************************************************************
      *      Create the GraphQl Api
@@ -72,7 +74,35 @@ export class PackageServiceStack extends cdk.Stack {
       xrayEnabled: true,
     });
 
-    api.addEnvironmentVariable("TABLE_NAME", packageTable.tableName);
+    /********************************************************************************************************
+     *      Merge Api Execution Rule
+     */
+    const roleArn = this.node.tryGetContext('roleArn');
+    const mergedApiExecutionRole = iam.Role.fromRoleArn(this, 'MergedApiExecutionRole',
+      roleArn)
+
+    const mergedApiArn = this.node.tryGetContext('mergedApiArn');
+    const mergedApiId = this.node.tryGetContext('mergedApiId');
+
+    const mergedApi = GraphqlApi.fromGraphqlApiAttributes(this, 'MergedApi', {
+      graphqlApiArn: mergedApiArn,
+      graphqlApiId: mergedApiId,
+    });
+
+    /********************************************************************************************************
+     *      Associates this api to the MergedApi
+     */
+    const sourceApiAssociation = new SourceApiAssociation(this, 'PackageSourceApiAssociation', {
+      sourceApi: api,
+      mergedApi: mergedApi,
+      mergedApiExecutionRole: mergedApiExecutionRole,
+      mergeType: MergeType.MANUAL_MERGE,
+    });
+    
+    new SourceApiAssociationMergeOperation(this, 'SourceApiMergeOperation', {
+      sourceApiAssociation: sourceApiAssociation,
+      alwaysMergeOnStackUpdate: true
+    });
 
     /********************************************************************************************************
      *      Create an EventBus
@@ -86,7 +116,6 @@ export class PackageServiceStack extends cdk.Stack {
      */
     const packageDatasource = api.addDynamoDbDataSource("PackageDatasource", packageTable)
     const eventBridgeDs = api.addEventBridgeDataSource('EventBridge', eventBus);
-    const noneDatasource = api.addNoneDataSource('NoneDataSource');
 
 
     /********************************************************************************************************
